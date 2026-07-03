@@ -15,7 +15,7 @@ paths:
 
 ### The Gate Is Mandatory
 
-Every HTML presentation deliverable must pass `skills/layout-gate/scripts/layout-gate.cjs` at all four configured viewports (1920×1080, 1366×768, 1280×720, 960×700) before any agent may mark the deliverable's task `completed`. Self-attestation ("I opened it in the browser and it looked fine") is not accepted as evidence and is explicitly distrusted by this rule.
+Every HTML presentation deliverable must pass `skills/layout-gate/scripts/layout-gate.cjs` at all configured viewports — currently six: four landscape (1920×1080, 1366×768, 1280×720, 960×700) and two portrait (768×1024, 390×844) — before any agent may mark the deliverable's task `completed`. Self-attestation ("I opened it in the browser and it looked fine") is not accepted as evidence and is explicitly distrusted by this rule.
 
 ### Required Artifacts
 
@@ -58,7 +58,7 @@ If the Web Developer reports completion without both reports, the Coordinator mu
 
 ### What the Gate Does Not Cover
 
-The gate measures runtime overflow at four viewports against `<section>` bounds. It does not catch:
+The gate measures runtime overflow and text/media collision at six viewports against `<section>` bounds. It does not catch:
 
 - Content density violations (still enforced by `rules/presentation-quality.md`)
 - Text size violations (still enforced by `rules/layout-overflow-prevention.md`)

@@ -54,8 +54,8 @@ The page should feel like a printed spread mounted on a slide — not like a web
 ### 2.3 Contrast (WCAG)
 
 - `--ink` on `--paper`: **15.4:1** ✓ AAA
-- `--ink-soft` on `--paper`: **9.1:1** ✓ AAA
-- `--oxblood` on `--paper`: **6.8:1** ✓ AA-large — short runs (headlines, emphasis) only, never extended body
+- `--ink-soft` on `--paper`: **10.6:1** ✓ AAA
+- `--oxblood` on `--paper`: **7.9:1** ✓ AA-large — short runs (headlines, emphasis) only, never extended body
 - `--paper` on `--ink`: **15.4:1** ✓ AAA
 
 ---

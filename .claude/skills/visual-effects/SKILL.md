@@ -162,6 +162,46 @@ function initParticles(canvas, count = 40) {
 }
 ```
 
+## Gate-Safe Decoration Containment
+
+Absolutely-positioned decorations (corner circles, floating SVG shapes, glow orbs) are the #1
+recurring layout-gate failure: Puppeteer measures the geometric bounding box, so a decoration
+poking past the slide edge fails the gate even when `clip-path` hides it visually. This exact
+root cause was fixed independently on qic-ai-travel-review-deck (top-right circle, horizontal
+overflow) and trendmicro-visionone-edr (FINDING-P5-001 / DECISION-P5-001: SVG deco,
+scrollW 2000 > clientW 1920). Do not rediscover it a third time — wrap every decoration layer:
+
+```html
+<section>
+  <!-- decoration layer: clipped wrapper, marked decorative -->
+  <div class="deco-layer" aria-hidden="true">
+    <svg class="corner-orb">…</svg>
+  </div>
+  <div class="content">…</div>
+</section>
+```
+
+```css
+.deco-layer {
+  position: absolute; inset: 0;
+  overflow: hidden;        /* kills the geometric-bbox overflow the gate measures */
+  pointer-events: none;
+  z-index: 0;
+}
+.deco-layer > * { position: absolute; }  /* decorations position freely INSIDE the clipped layer */
+section > .content { position: relative; z-index: 1; }
+```
+
+Two rules, both mandatory:
+
+1. **Clip at the layer, not the shape.** `overflow: hidden` on the wrapper is what the gate
+   measures; `clip-path` on the shape itself is invisible to `scrollWidth`/bbox math and will
+   still FAIL.
+2. **Mark it decorative.** `aria-hidden="true"` (or a class matching
+   `deco|background|bg-|overlay|particle|vignette|grid`) exempts the layer from the gate's
+   text/media overlap check. An unmarked background SVG under live text is flagged as a collision
+   — the gate cannot tell intent, only markup.
+
 ## Performance Guidelines
 
 - Use only GPU-accelerated properties for continuous animations: `transform`, `opacity`, `filter`, `backdrop-filter`.

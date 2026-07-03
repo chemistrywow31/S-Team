@@ -105,7 +105,7 @@ Every slide must visibly use **at least three** of the four primaries (black, re
 - `--color-text` (#111) on `--color-bg` (#f8f5e9): **17.2:1** ✓ AAA
 - `--color-muted` (#4a4a42) on `--color-bg`: **8.4:1** ✓ AAA
 - `--color-on-accent` (#fffdf2) on `--color-accent` (#d62d20): **4.9:1** ✓ AA
-- `--color-violet` (#0057b8) on `--color-bg`: **7.1:1** ✓ AAA
+- `--color-violet` (#0057b8) on `--color-bg`: **6.3:1** ✓ AA — large text and short runs; not AAA
 - `--color-text` on `--color-gold` (#f7c600): **11.4:1** ✓ AAA — yellow is safe as text background
 - `--color-accent` (red) on `--color-bg` text: **4.6:1** ✓ AA at large display sizes only — never on body copy
 

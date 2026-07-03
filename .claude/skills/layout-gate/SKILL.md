@@ -42,7 +42,7 @@ Optional flags:
   "timestamp": "2026-04-28T12:34:56.000Z",
   "status": "PASS | FAIL",
   "summary": {
-    "viewportsTested": 4,
+    "viewportsTested": 6,
     "viewportsFailed": 0,
     "totalOverflowingSlides": 0
   },
@@ -58,13 +58,30 @@ Per-viewport directory containing PNG screenshots of every FAIL slide. Reviewers
 
 ## What the Gate Checks
 
-For each of four viewports (1920×1080, 1366×768, 1280×720, 960×700 authored), iterate every slide and verify:
+For each of six viewports — four landscape (1920×1080, 1366×768, 1280×720, 960×700 authored) plus
+two portrait (768×1024 tablet, 390×844 phone; added after the lesson-20260506 phone-rendering
+incident, replacing that task's ad-hoc Phase 7 scripts) — iterate every slide (vertical stacks
+included, navigated by (h, v) coordinate) and verify:
 
 1. `scrollHeight ≤ clientHeight + 2px` (no vertical clipping)
 2. `scrollWidth ≤ clientWidth + 2px` (no horizontal clipping)
 3. No descendant element extends > 2px past the slide bounding box
-4. `Reveal.isReady()` resolves within 8s (presentation actually loads)
-5. Either per-slide auto-fit JS is installed, OR every slide already fits — if a viewport fails AND auto-fit is missing, advisory points at `rules/responsive-auto-fit.md` Layer 3
+4. No non-decorative text block visually intersects a non-decorative media element
+   (`img`/`svg`/`canvas`/`video`/`figure`) by more than 8px in both axes. Decorative elements are
+   exempted by `aria-hidden="true"` or a class/data attribute matching
+   `deco|background|bg-|overlay|particle|vignette|grid` — mark backgrounds accordingly, per the
+   Gate-Safe Decoration pattern in `skills/visual-effects/SKILL.md`.
+5. `Reveal.isReady()` resolves within 8s (presentation actually loads)
+6. Navigation integrity: `Reveal.slide(h, v)` must actually land on each slide. Reveal ≥5 switches
+   to scroll view under 435px viewport width, where navigation no-ops and naive measurement reads
+   slide 0 forever (a false PASS); the gate force-disables scroll view (`scrollViewDisabled: true`
+   in the report) and FAILs with `reason: "navigation-broken"` if navigation still misses.
+7. Either per-slide auto-fit JS is installed, OR every slide already fits — if a viewport fails AND auto-fit is missing, advisory points at `rules/responsive-auto-fit.md` Layer 3
+
+The overlap check (4) institutionalizes the text/figure collision class that previously required
+hand-written Puppeteer scripts. Intentional text-over-image is still a violation of the team's
+visual-asset rule (live text belongs beside, not on, photos); genuinely decorative layers must be
+marked, not left ambiguous.
 
 ## Exit Codes
 

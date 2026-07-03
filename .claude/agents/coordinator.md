@@ -42,7 +42,7 @@ Before Phase 2, ask the user to pick a style; the deck cannot be designed withou
 ```
 
 - **Built-in key**: validate it against the `.claude/styles/` directory listing (not a hardcoded list), confirm `.claude/styles/<key>/tokens.md` exists, and record `style: <key>` in the Requirements Summary.
-- **`custom`**: insert a Phase 1.5 dispatch — send the Visual Designer to interview the user and produce `.claude/styles/<chosen-name>/tokens.md` per the 10 sections in `.claude/styles/README.md`. Do not start Phase 2 until the user confirms the new tokens.md.
+- **`custom`**: insert a Phase 1.5 dispatch — send the Visual Designer to run `skills/style-create/` (interview → tokens.md from the template → `validate-tokens.cjs` PASS → preview deck through both HTML gates). Do not start Phase 2 until the validator report is green and the user confirms on the rendered preview, not the spec text.
 - Propagate the chosen key to every Phase 5 dispatch inside `<style_key>` tags alongside the worklog path.
 - If the user refuses to choose, recommend `minimal-modern` as the safest default and state the reason — never choose silently.
 
@@ -121,11 +121,11 @@ Before dispatching any Task, fill this gate:
 ## Workflow
 
 1. **Phase 1 — Intake**: Confirm requirements and run Style Intake. Write the Requirements Summary and `brief.md`. Get user approval before Phase 2.
-2. **Phase 2 — Research** (parallel): dispatch Investigative Researcher and Domain Expert in one message; each writes to its worklog. Gate: both return DONE + EC-3 verified before Phase 3.
+2. **Phase 2 — Research** (parallel): dispatch Investigative Researcher and Domain Expert in one message; each writes to its worklog. Gate: both return DONE + EC-3 verified, AND the Source Registry file exists at its worklog path, before Phase 3. Every Phase 3+ dispatch carries the registry path explicitly — an architect must never have to invent derived source IDs because the registry arrived late (this happened on qic-ai-travel-review-deck; see its phase-3 decisions.md Outstanding Concerns).
 3. **Phase 3 — Planning** (parallel): dispatch Presentation Architect and Technical Architect. The Architect writes its outline and `[TECH]`-tagged slide list to the worklog; relay that path to the Technical Architect (subagents cannot message peers). Gate: both deliverables verified.
 4. **Phase 4 — Writing**: dispatch Presentation Writer with the outline + technical-solution paths. Gate: draft verified.
-5. **Phase 5 — Production** (parallel): dispatch Visual Designer and Web Developer with `<style_key>` and worklog paths. Enforce the Layout Gate Verification hard gate on the Web Developer's return.
-6. **Phase 6 — QA**: dispatch QA Reviewer with all deliverable paths. Gate on its report.
+5. **Phase 5 — Production** (parallel): dispatch Visual Designer and Web Developer with `<style_key>` and worklog paths. Enforce the Layout Gate Verification hard gate on the Web Developer's return. For PPTX deliverables the same gating applies via `pptx-gate-report.json` (`skills/pptx-render-gate/`). For folder/zip delivery or PDF export, the Web Developer runs `skills/deck-bundle/` BEFORE the final gate runs — gate reports produced pre-bundle are stale evidence.
+6. **Phase 6 — QA** (two sequential dispatches — a single combined QA task stalled on qic-ai-travel-review-deck): **Pass A (mechanical gate audit)** — verify every required gate report exists, is fresh, and PASSes (layout, render, pptx, bundle as applicable) plus source-registry cross-check; a Pass A FAIL routes straight to Phase 7 without dispatching Pass B. **Pass B (deep review)** — the remaining quality categories (value delivery, technical correctness, style token compliance, speaker notes, PPTX contact-sheet review). Gate on both reports.
 7. **Phase 6.5 — Process Review**: dispatch Process Reviewer with the worklog triads and QA report.
 8. **Phase 7 — Revision**: route each QA issue per the Revision Routing map; re-verify High/Critical fixes; deliver final output to the user.
 

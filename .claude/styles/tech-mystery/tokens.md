@@ -71,8 +71,8 @@ The mystery comes from restraint, not from chaos. One pulse of cyan against a va
 
 - `--text-primary` on `--bg-base`: **17.2:1** ✓ AAA
 - `--text-secondary` on `--bg-base`: **8.4:1** ✓ AAA
-- `--accent-cyan` on `--bg-base`: **9.6:1** ✓ AAA — safe for stat values
-- `--accent-magenta` on `--bg-base`: **6.1:1** ✓ AA — short runs only (titles, callouts)
+- `--accent-cyan` on `--bg-base`: **11.1:1** ✓ AAA — safe for stat values
+- `--accent-magenta` on `--bg-base`: **8.2:1** ✓ AA — short runs only (titles, callouts)
 - Body text never uses accent colors. Accents are for type ≥ 24px or non-text glow.
 
 ---

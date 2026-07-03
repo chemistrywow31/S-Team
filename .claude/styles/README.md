@@ -77,13 +77,18 @@ QA Reviewer cross-references the chosen style's `tokens.md` against the rendered
 
 ## Custom Style Workflow
 
-When the user picks `custom` at intake:
+When the user picks `custom` at intake, the Coordinator dispatches Visual Designer with a
+Phase 1.5 token-design task that follows `.claude/skills/style-create/SKILL.md` — this skill is
+the single entry point for style creation; do not improvise a parallel procedure. In outline:
 
-1. Coordinator dispatches Visual Designer with a Phase 1.5 token-design task
-2. Visual Designer interviews the user (mood references, color preferences, typography flavor, motion appetite)
-3. Visual Designer drafts `tokens.md` following the 10-section structure
-4. User confirms; Coordinator saves to `.claude/styles/<chosen-name>/tokens.md`
-5. The custom style is now available for future projects
+1. Interview the user (mood references, surface tone, color appetite, typography flavor, motion appetite, hard don'ts)
+2. Draft `tokens.md` from `.claude/skills/style-create/template/tokens-template.md` (10-section structure)
+3. Pass the mechanical validator: `node .claude/skills/style-create/scripts/validate-tokens.cjs .claude/styles/<name>`
+   — structure, computed WCAG contrast, and motion-policy checks; the PASS output is the EC-3 evidence
+4. Build a preview deck exercising every signature component; both HTML gates must PASS; user confirms on pixels
+5. The custom style is saved at `.claude/styles/<chosen-name>/tokens.md` and available for future projects
+
+The same validator audits existing styles (QA Phase 6 may cite it for token compliance).
 
 Naming: kebab-case, descriptive (e.g., `sushi-zen`, `brutalist-print`, `aurora-dreamscape`). Avoid generic names like `dark-theme` or `corporate`.
 

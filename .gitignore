@@ -13,3 +13,5 @@ node_modules/
 render-gate-report.json
 layout-gate-report.json
 render-gate-screenshots/
+pptx-gate-report.json
+pptx-gate-renders/

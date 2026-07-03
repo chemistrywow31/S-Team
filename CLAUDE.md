@@ -48,9 +48,11 @@ Every factual claim in the presentation must have a traceable source. The Invest
 
 Every HTML presentation must include premium visual effects that exceed standard AI-generated output quality. Required effect categories: glass morphism, rotating glow borders, gradient text, neon glows, SVG animations, particle backgrounds, and cinematic `data-auto-animate` transitions. Reference `skills/visual-effects/SKILL.md` for implementation patterns and `rules/visual-effects-standard.md` for quality enforcement. All effects must maintain 60fps performance and include `prefers-reduced-motion` accessibility support.
 
-### Mandatory Layout Gate (HTML deliverables)
+### Mandatory Gates (per deliverable format)
 
-Every HTML presentation must pass `skills/layout-gate/scripts/layout-gate.cjs` at all four configured viewports before any agent may mark the deliverable complete. The gate produces `layout-gate-report.json` with `"status": "PASS"`. Every HTML presentation must also pass `skills/render-content-gate/scripts/render-gate.cjs`, producing `render-gate-report.json` with `"status": "PASS"` — the render-content gate catches slides that render blank, which geometry checks cannot see; a geometry PASS never substitutes for a render PASS. These two reports together are the sole evidence accepted by the Coordinator and QA Reviewer for layout and render compliance. Visual self-attestation ("I opened it in the browser") is rejected. Reference `rules/layout-gate.md` for the full mandate, `rules/responsive-auto-fit.md` for the auto-fit snippet, and `rules/layout-overflow-prevention.md` for content-density limits.
+Every HTML presentation must pass `skills/layout-gate/scripts/layout-gate.cjs` at all configured viewports (currently six: four landscape + two portrait; the gate also detects text/media collision) before any agent may mark the deliverable complete. The gate produces `layout-gate-report.json` with `"status": "PASS"`. Every HTML presentation must also pass `skills/render-content-gate/scripts/render-gate.cjs`, producing `render-gate-report.json` with `"status": "PASS"` — the render-content gate catches slides that render blank, which geometry checks cannot see; a geometry PASS never substitutes for a render PASS. These two reports together are the sole evidence accepted by the Coordinator and QA Reviewer for layout and render compliance. Visual self-attestation ("I opened it in the browser") is rejected. Reference `rules/layout-gate.md` for the full mandate, `rules/responsive-auto-fit.md` for the auto-fit snippet, and `rules/layout-overflow-prevention.md` for content-density limits.
+
+Every PPTX deliverable must pass `skills/pptx-render-gate/scripts/pptx-gate.cjs`, producing `pptx-gate-report.json` with `"status": "PASS"` (unsupported-shape lint, conversion, page parity, blank-slide detection); QA reviews the gate's contact sheet for style-level judgment the gate cannot make. Any deck delivered as a folder/zip or exported to PDF must first pass `skills/deck-bundle/scripts/bundle-deck.cjs` (`bundle-report.json` `"status": "PASS"` — offline-safe, no CDN dependencies); layout/render gate reports produced before bundling are stale evidence.
 
 ### Style System (Mandatory Intake Step)
 
@@ -61,7 +63,7 @@ Every presentation must declare a style at intake — before Phase 2 research be
 - `editorial` (編輯風) — editorial magazine, ink-on-cream, bilingual CJK + Latin
 - `bauhaus` (包浩斯風) — Bauhaus operational deck, square corners, black/red/yellow/blue on cream, flat offset shadows
 
-The Coordinator must ask the user to pick one of the built-ins or `custom` (define a new style for this project, saved to `.claude/styles/<custom-name>/tokens.md` for reuse). The chosen style key flows into the Requirements Summary and is consumed by the Visual Designer at Phase 5 as the visual ground truth. Each style's `tokens.md` declares its own Motion & Effects Policy, which overrides the default coverage requirement in `rules/visual-effects-standard.md`.
+The Coordinator must ask the user to pick one of the built-ins or `custom` (define a new style for this project via `skills/style-create/` — interview, 10-section tokens.md, `validate-tokens.cjs` PASS, preview deck — saved to `.claude/styles/<custom-name>/tokens.md` for reuse). The chosen style key flows into the Requirements Summary and is consumed by the Visual Designer at Phase 5 as the visual ground truth. Each style's `tokens.md` declares its own Motion & Effects Policy, which overrides the default coverage requirement in `rules/visual-effects-standard.md`. The same validator audits existing styles at QA time.
 
 Reference `.claude/styles/README.md` for the full system specification and the 10 required sections in any `tokens.md`.
 
@@ -95,6 +97,9 @@ Two conflicting rules at the same level: the rule with the narrower Applicabilit
 |---|---|---|
 | HTML Presentations | reveal.js, Slidev, or plain HTML/CSS/JS | `skills/html-presentation/` |
 | PowerPoint (.pptx) | PptxGenJS (create), python-pptx + XML editing (template) | `skills/pptx/` — see editing.md, pptxgenjs.md |
+| PPTX visual gate | LibreOffice + poppler + Puppeteer pipeline | `skills/pptx-render-gate/` |
+| Offline delivery bundling | CDN asset vendoring + reference verification | `skills/deck-bundle/` |
+| Style creation & audit | 10-section tokens.md + WCAG-computing validator | `skills/style-create/` |
 | PDF Processing | pypdf, pdfplumber, reportlab, qpdf, Puppeteer | `skills/pdf/` — see reference.md, forms.md |
 | Web POC | HTML/CSS/JS, React (if needed), Node.js backend (if needed) | `skills/web-poc/` |
 | Source Verification | WebSearch, WebFetch tools | `skills/source-verification/` |

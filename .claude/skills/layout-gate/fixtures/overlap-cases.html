@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Fixture: text/media overlap detection</title>
+<link rel="stylesheet" href="../../../../node_modules/reveal.js/dist/reveal.css">
+<link rel="stylesheet" href="../../../../node_modules/reveal.js/dist/theme/white.css">
+<style>
+  .reveal section h2 { color:#111; font-size:40px; }
+  .reveal section p { color:#222; font-size:24px; }
+  /* Slide 2: a figure absolutely positioned UNDER live text — the collision class
+     found by the ad-hoc Phase 7 script on lesson-20260506. Must FAIL. */
+  .colliding-svg { position:absolute; top:40px; left:80px; width:300px; height:200px; }
+  .over-text { position:absolute; top:100px; left:120px; width:400px; }
+  /* Slide 3: same geometry but the svg is a marked decoration — must be EXEMPT. */
+  .bg-decoration { position:absolute; top:40px; left:80px; width:300px; height:200px; }
+</style>
+</head>
+<body>
+<div class="reveal"><div class="slides">
+
+  <section>
+    <h2>Clean slide</h2>
+    <p>Text and image side by side, no intersection.</p>
+    <svg width="200" height="100"><rect width="200" height="100" fill="#4a90d9"/></svg>
+  </section>
+
+  <section>
+    <h2>Colliding slide</h2>
+    <svg class="colliding-svg"><rect width="300" height="200" fill="#e8a33d"/></svg>
+    <p class="over-text">This paragraph sits directly on top of a non-decorative SVG figure and must be flagged.</p>
+  </section>
+
+  <section>
+    <h2>Decorated slide</h2>
+    <svg class="bg-decoration" aria-hidden="true"><rect width="300" height="200" fill="#eee"/></svg>
+    <p class="over-text">Same geometry, but the SVG is aria-hidden decorative background — exempt, no flag.</p>
+  </section>
+
+</div></div>
+<script src="../../../../node_modules/reveal.js/dist/reveal.js"></script>
+<script>
+Reveal.initialize({ controls:false, progress:false, hash:false, transition:'none' });
+// minimal auto-fit marker so the gate's autoFitDetected heuristic is satisfied
+Reveal.on('slidechanged', () => {
+  document.querySelectorAll('.reveal section').forEach(s => {
+    if (s.scrollHeight > s.clientHeight) { /* would scale via transform = scale(ratio) */ }
+  });
+});
+</script>
+</body>
+</html>

@@ -83,9 +83,9 @@ The accent is one color per project. Default indigo `#4F46E5`. Common overrides:
 
 ### 2.4 Contrast (WCAG)
 
-- `--text-primary` on `--surface-base`: **17.6:1** ✓ AAA
+- `--text-primary` on `--surface-base`: **17.0:1** ✓ AAA
 - `--text-body` on `--surface-base`: **14.2:1** ✓ AAA
-- `--text-secondary` on `--surface-base`: **8.0:1** ✓ AAA
+- `--text-secondary` on `--surface-base`: **7.4:1** ✓ AAA
 - `--accent` (indigo) on `--surface-base`: **6.5:1** ✓ AA — safe for body links
 - `--text-secondary` on `--accent-soft`: **6.4:1** ✓ AA
 

@@ -12,8 +12,13 @@
 // What "PASS" means per slide × viewport:
 //   - Slide <section> scrollHeight ≤ clientHeight + 2px AND scrollWidth ≤ clientWidth + 2px
 //   - No descendant element extends > 2px past the slide bounding rect
+//   - No non-decorative text block visually intersects a non-decorative media element
+//     (img/svg/canvas/video/figure) by more than 8px in both axes
 //   - Reveal.js initialised within 8s
 //   - One of: per-slide auto-fit JS detected OR Reveal minScale/maxScale set OR every slide already fits
+//
+// Viewports: 4 landscape + 2 portrait (768x1024, 390x844 — added after the
+// lesson-20260506 phone-rendering incident).
 //
 // Produces:
 //   layout-gate-report.json — machine-readable evidence
@@ -59,6 +64,10 @@ const VIEWPORTS = [
   { name: '1366x768',  width: 1366, height: 768  },
   { name: '1280x720',  width: 1280, height: 720  },
   { name: '960x700',   width: 960,  height: 700  }, // reveal.js authored default
+  // Portrait viewports — added after lesson-20260506 shipped a deck that broke on
+  // phones and needed ad-hoc Puppeteer checks in Phase 7 (see that task's decisions.md).
+  { name: '768x1024',  width: 768,  height: 1024 }, // tablet portrait
+  { name: '390x844',   width: 390,  height: 844  }, // phone portrait
 ];
 
 function parseArgs(argv) {
@@ -124,6 +133,19 @@ function parseArgs(argv) {
     // Allow per-slide auto-fit JS (if any) to run after `ready`.
     await new Promise(r => setTimeout(r, 800));
 
+    // Reveal ≥5 flips to scroll view below scrollActivationWidth (default 435px viewport
+    // width). In scroll view Reveal.slide() navigation no-ops and getCurrentSlide() keeps
+    // returning slide 0, so every measurement silently reads the first slide — a false
+    // PASS. Force classic slide view for measurement at portrait/phone viewports.
+    const scrollViewDisabled = await page.evaluate(() => {
+      if (typeof Reveal.isScrollView === 'function' && Reveal.isScrollView()) {
+        Reveal.configure({ scrollActivationWidth: 0 });
+        return true;
+      }
+      return false;
+    });
+    if (scrollViewDisabled) await new Promise(r => setTimeout(r, 600));
+
     const config = await page.evaluate(() => ({
       minScale: Reveal.getConfig().minScale ?? null,
       maxScale: Reveal.getConfig().maxScale ?? null,
@@ -136,12 +158,26 @@ function parseArgs(argv) {
       )
     );
 
-    const total = await page.evaluate(() => Reveal.getTotalSlides());
+    // Resolve every slide's (h, v) coordinate up front — flat h-only navigation skips
+    // or mismeasures vertical stacks.
+    const slideCoords = await page.evaluate(() =>
+      Reveal.getSlides().map(s => {
+        const ix = Reveal.getIndices(s);
+        return { h: ix.h, v: ix.v ?? 0 };
+      })
+    );
+    const total = slideCoords.length;
     const slides = [];
+    let navigationBroken = false;
     for (let i = 0; i < total; i++) {
-      await page.evaluate(idx => Reveal.slide(idx), i);
+      await page.evaluate(c => Reveal.slide(c.h, c.v), slideCoords[i]);
       // wait for any slidechanged-driven auto-fit
       await new Promise(r => setTimeout(r, 350));
+
+      // Navigation integrity: if the deck ignored Reveal.slide() (e.g. scroll view still
+      // active), every measurement would silently read the same slide — fail loudly.
+      const at = await page.evaluate(() => { const ix = Reveal.getIndices(); return { h: ix.h, v: ix.v ?? 0 }; });
+      if (at.h !== slideCoords[i].h || at.v !== slideCoords[i].v) { navigationBroken = true; break; }
 
       const m = await page.evaluate(() => {
         const cur = Reveal.getCurrentSlide();
@@ -165,16 +201,63 @@ function parseArgs(argv) {
             });
           }
         });
+        // Text/media overlap check — institutionalizes the ad-hoc Phase 7 script from
+        // lesson-20260506. Elements marked decorative (aria-hidden, or class/data matching
+        // deco|background|bg-|overlay|particle|vignette|grid) are exempt: they legitimately
+        // sit behind content. Ancestor/descendant pairs are exempt (nesting ≠ collision).
+        const isExempt = el => {
+          for (let n = el; n && n !== cur; n = n.parentElement) {
+            if (n.getAttribute && n.getAttribute('aria-hidden') === 'true') return true;
+            const cd = (n.className || '').toString() + ' ' + (n.dataset ? Object.keys(n.dataset).join(' ') : '');
+            if (/deco|background|bg-|overlay|particle|vignette|grid/i.test(cd)) return true;
+          }
+          return false;
+        };
+        const textBlocks = [];
+        cur.querySelectorAll('h1,h2,h3,h4,p,li,blockquote,figcaption,td,th,dt,dd').forEach(el => {
+          const ownText = Array.from(el.childNodes)
+            .filter(n => n.nodeType === 3).map(n => n.textContent).join('').trim();
+          if (ownText.length < 3 || isExempt(el)) return;
+          const tr = el.getBoundingClientRect();
+          if (tr.width < 4 || tr.height < 4) return;
+          textBlocks.push({ el, rect: tr, text: ownText.slice(0, 30) });
+        });
+        const mediaEls = [];
+        cur.querySelectorAll('img,svg,canvas,video,figure').forEach(el => {
+          if (isExempt(el)) return;
+          const mr = el.getBoundingClientRect();
+          if (mr.width < 12 || mr.height < 12) return;
+          mediaEls.push({ el, rect: mr });
+        });
+        const overlaps = [];
+        for (const t of textBlocks) {
+          for (const md of mediaEls) {
+            if (md.el.contains(t.el) || t.el.contains(md.el)) continue;
+            const ix = Math.min(t.rect.right, md.rect.right) - Math.max(t.rect.left, md.rect.left);
+            const iy = Math.min(t.rect.bottom, md.rect.bottom) - Math.max(t.rect.top, md.rect.top);
+            if (ix > 8 && iy > 8) {
+              overlaps.push({
+                text: t.text,
+                media: md.el.tagName.toLowerCase(),
+                mediaCls: (md.el.className || '').toString().slice(0, 60),
+                overlapW: Math.round(ix), overlapH: Math.round(iy),
+              });
+            }
+          }
+        }
+
         return {
           scrollH: sh, clientH: ch, scrollW: sw, clientW: cw,
           slideOverflowsContainer: (sh - ch > 2) || (sw - cw > 2),
           overflowingChildren: overflowingChildren.slice(0, 8),
           overflowCount: overflowingChildren.length,
+          overlaps: overlaps.slice(0, 6),
+          overlapCount: overlaps.length,
           title: (cur.querySelector('h1,h2,h3')?.textContent || '').trim().slice(0, 60),
         };
       });
 
-      const slideFailed = !!m && (m.slideOverflowsContainer || m.overflowCount > 0);
+      const slideFailed = !!m && (m.slideOverflowsContainer || m.overflowCount > 0 || m.overlapCount > 0);
       slides.push({ idx: i, failed: slideFailed, ...m });
 
       if (slideFailed) {
@@ -188,9 +271,11 @@ function parseArgs(argv) {
     }
 
     const slidesFailed = slides.filter(s => s.failed).length;
-    const vpFailed = slidesFailed > 0;
+    const vpFailed = slidesFailed > 0 || navigationBroken;
     report.viewports[vp.name] = {
       status: vpFailed ? 'FAIL' : 'PASS',
+      ...(navigationBroken ? { reason: 'navigation-broken — Reveal.slide() did not land on the requested slide; measurements would be invalid' } : {}),
+      ...(scrollViewDisabled ? { scrollViewDisabled: true } : {}),
       revealConfig: config,
       autoFitDetected,
       totalSlides: total,
