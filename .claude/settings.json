@@ -1,0 +1,80 @@
+{
+  "env": {},
+  "permissions": {
+    "allow": [
+      "Bash(mkdir *)",
+      "Bash(ls *)",
+      "Bash(cat *)",
+      "Bash(jq *)",
+      "Bash(test *)",
+      "Bash(grep *)",
+      "Bash(find *)",
+      "Bash(git status)",
+      "Bash(git diff *)",
+      "Bash(git log *)",
+      "Bash(node .claude/skills/layout-gate/scripts/layout-gate.cjs *)",
+      "Bash(node */layout-gate.cjs *)",
+      "Bash(npm install puppeteer)",
+      "Read",
+      "Grep",
+      "Glob"
+    ],
+    "ask": [
+      "Bash(curl *)",
+      "Bash(rm *)",
+      "Bash(git push *)",
+      "Bash(git commit *)",
+      "Agent"
+    ],
+    "deny": [
+      "Bash(rm -rf /*)",
+      "Bash(git push --force *)"
+    ]
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "mkdir -p .worklog/$(date +%Y%m)",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "mkdir -p .worklog/$(date +%Y%m) && jq -r '.prompt' >> .worklog/$(date +%Y%m)/session-ledger.md",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq '{ts:now, reason:.reason}' > .worklog/$(date +%Y%m)/compact-checkpoint.json",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "test -d .worklog/$(date +%Y%m) || echo 'WARN: no worklog dir' >&2",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Fixture: slides 2..N render blank</title>
+<link rel="stylesheet" href="../../../../node_modules/reveal.js/dist/reveal.css">
+<link rel="stylesheet" href="../../../../node_modules/reveal.js/dist/theme/white.css">
+<style>
+  .reveal section h2 { color:#111; }
+  .reveal section p { color:#222; font-size:28px; }
+  /* Reproduces the production incident: content is present in the DOM (so the
+     geometry/layout gate sees well-formed, non-overflowing boxes and PASSES),
+     but it is never painted, so the audience sees blank white slides. */
+  .ghost { visibility:hidden; }
+</style>
+</head>
+<body>
+<div class="reveal"><div class="slides">
+  <section><h2>Title Slide</h2><p>This first slide renders correctly with visible dark text on white.</p></section>
+  <section><div class="ghost"><h2>Agenda</h2><p>These bullet points exist in the DOM but are visibility:hidden — blank white.</p></div></section>
+  <section><div class="ghost"><h2>Details</h2><p>Occupies layout space (no overflow) yet paints nothing — a false layout PASS.</p></div></section>
+  <section><div class="ghost"><h2>Summary</h2><p>Third consecutive blank slide, exactly the all-white incident class.</p></div></section>
+</div></div>
+<script src="../../../../node_modules/reveal.js/dist/reveal.js"></script>
+<script>Reveal.initialize({ controls:false, progress:false, hash:false, transition:'none' });</script>
+</body>
+</html>

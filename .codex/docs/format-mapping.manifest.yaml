@@ -1,0 +1,82 @@
+spec_version: 1
+supported_directions:
+  - claude_to_codex
+  - codex_to_claude
+canonical_roots:
+  codex_authored:
+    - AGENTS.md
+    - .codex
+    - agents
+  codex_runtime:
+    - .agents
+  claude_legacy:
+    - CLAUDE.md
+    - .claude
+default_policies:
+  ambiguity: fail
+  lossy_transform: require_sidecar
+artifacts:
+  - id: root-project-doc
+    kind: project_doc
+    source: { runtime: claude, path: CLAUDE.md }
+    targets:
+      - { runtime: codex, path: AGENTS.md, canonical: true }
+    relation: '1:1'
+    transform_mode: adapted
+    lossy: false
+  - id: agent-registry
+    kind: runtime_config
+    source: { runtime: codex, path: .codex/config.toml }
+    targets: []
+    relation: '1:many'
+    transform_mode: codex-only
+    canonical: true
+    validation:
+      - every config_file resolves from .codex to ../agents/**/*.toml
+      - features.multi_agent is true
+    lossy: false
+  - id: agent-runtime-bundle
+    kind: agent_config_bundle
+    source: { runtime: claude, path: .claude/agents }
+    targets:
+      - { runtime: codex, path: agents, canonical: true }
+    relation: 'many:many'
+    transform_mode: adapted
+    lossy: true
+  - id: rules-bundle
+    kind: rule_bundle
+    source: { runtime: claude, path: .claude/rules }
+    targets:
+      - { runtime: codex, path: .codex/rules, canonical: true }
+    relation: 'many:many'
+    transform_mode: adapted
+    lossy: false
+  - id: skills-authored-bundle
+    kind: skill_bundle
+    source: { runtime: claude, path: .claude/skills }
+    targets:
+      - { runtime: codex, path: .codex/skills, canonical: true }
+      - { runtime: codex, path: .agents/skills, canonical: false }
+    relation: 'many:many'
+    transform_mode: adapted
+    lossy: true
+    sidecar:
+      carries:
+        - removed Claude-only frontmatter
+  - id: style-system
+    kind: style_bundle
+    source: { runtime: claude, path: .claude/styles }
+    targets:
+      - { runtime: codex, path: .codex/styles, canonical: true }
+    relation: 'many:many'
+    transform_mode: adapted
+    lossy: false
+    validation:
+      - .codex/styles/README.md exists
+      - each built-in style has tokens.md
+      - token docs reference .codex paths
+  - id: image-generation-config
+    kind: secret_config
+    status: removed
+    removed: 2026-07-03
+    note: image-generation capability removed from the team (user-approved); source and both mirrors deleted on all platforms

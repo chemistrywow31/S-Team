@@ -1,0 +1,50 @@
+model = "gpt-5.4"
+model_reasoning_effort = "xhigh"
+disable_response_storage = true
+
+[features]
+multi_agent = true
+
+[agents]
+max_threads = 6
+max_depth = 1
+
+[agents.coordinator]
+description = "Orchestrates the presentation studio workflow by managing task assignments, phase transitions, and team communication"
+config_file = "../agents/coordinator.toml"
+
+[agents.investigative_researcher]
+description = "Investigates, verifies, and rates information sources to build a credible knowledge base for presentations"
+config_file = "../agents/research/investigative-researcher.toml"
+
+[agents.domain_expert]
+description = "Provides authoritative domain analysis, structured frameworks, and professional knowledge to ground presentation content"
+config_file = "../agents/research/domain-expert.toml"
+
+[agents.presentation_architect]
+description = "Designs presentation structure, narrative flow, and slide-by-slide outlines"
+config_file = "../agents/planning/presentation-architect.toml"
+
+[agents.technical_architect]
+description = "Designs technical solutions, architecture diagrams, and feasibility assessments for presentations and POCs"
+config_file = "../agents/planning/technical-architect.toml"
+
+[agents.presentation_writer]
+description = "Transforms outlines and research into polished slide content with speaker notes"
+config_file = "../agents/production/presentation-writer.toml"
+
+[agents.visual_designer]
+description = "Designs visual styles, generates images, and creates polished slide layouts"
+config_file = "../agents/production/visual-designer.toml"
+
+[agents.web_developer]
+description = "Implements HTML presentations, generates PPT/PDF outputs, and builds Web POC prototypes"
+config_file = "../agents/production/web-developer.toml"
+
+[agents.qa_reviewer]
+description = "Reviews all presentation deliverables for accuracy, completeness, and quality before final delivery"
+config_file = "../agents/quality/qa-reviewer.toml"
+
+[agents.process_reviewer]
+description = "Audit Presentation Studio coordination quality and produce a retrospective report."
+config_file = "../agents/review/process-reviewer.toml"

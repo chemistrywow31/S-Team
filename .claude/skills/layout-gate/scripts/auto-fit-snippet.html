@@ -1,0 +1,47 @@
+<!--
+  Layout Auto-Fit Snippet (Layer 3 of rules/responsive-auto-fit.md)
+  ---------------------------------------------------------------
+  Drop this <script> block immediately after Reveal.initialize(). Pair with:
+    - Reveal config: minScale: 0.1, maxScale: 2.0
+    - Card/grid CSS: min-height: 0; overflow: hidden;
+  After integration, run:
+    node .claude/skills/layout-gate/scripts/layout-gate.cjs path/to/index.html
+  Gate must exit 0 before the deliverable is shippable.
+-->
+<script>
+  (function installAutoFit() {
+    const FLOOR = 0.55;
+
+    function fitSlide(section) {
+      // Reset before measuring (avoid compounding scale).
+      section.style.transform = '';
+      section.style.transformOrigin = '';
+      const sh = section.scrollHeight;
+      const ch = section.clientHeight;
+      if (sh > ch && ch > 0) {
+        const ratio = Math.max(FLOOR, ch / sh);
+        section.style.transformOrigin = 'center center';
+        section.style.transform = 'scale(' + ratio + ')';
+      }
+    }
+
+    function fitAll() {
+      document.querySelectorAll('.reveal .slides section').forEach(fitSlide);
+    }
+
+    // Mark presence for layout-gate detection.
+    window.__layoutAutoFitInstalled = true;
+
+    if (typeof Reveal !== 'undefined') {
+      Reveal.on('ready', () => setTimeout(fitAll, 200));
+      Reveal.on('slidechanged', (e) => {
+        requestAnimationFrame(() => e.currentSlide && fitSlide(e.currentSlide));
+      });
+    }
+    let resizeTimer;
+    window.addEventListener('resize', () => {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(fitAll, 150);
+    });
+  })();
+</script>
