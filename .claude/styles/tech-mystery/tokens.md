@@ -299,11 +299,13 @@ motion-policy:
     - particle-background       # all content slides
     - gradient-text             # hero + chapter dividers
     - pulse-glow                # stat values, key numerals
+    - depth-parallax            # cover + chapter dividers ≥ 2 layers; mouse camera deck-wide
   allowed:
     - svg-line-draw             # diagrams
     - auto-animate-morph        # section transitions
     - scanline-overlay          # opt-in for terminal slides
     - shimmer-text              # ≤ 1 per deck, key insight only
+    - particle-converge-glyph   # cover / divider mark moments; ≤ 2000 particles, 2D canvas only
   forbidden:
     - blink                     # WCAG safety
     - infinite-color-cycle      # reads as gimmicky
@@ -313,7 +315,7 @@ motion-policy:
     continuous-animations-per-slide: 5  # absolute max
     slides-with-effects: 100            # all content slides
   reduced-motion:
-    disable: [particle-background, rotating-glow-border, pulse-glow, shimmer-text]
+    disable: [particle-background, rotating-glow-border, pulse-glow, shimmer-text, depth-parallax, particle-converge-glyph]
     keep:    [gradient-text, fade-up entrance, glass-morphism]
 ```
 

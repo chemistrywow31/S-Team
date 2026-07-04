@@ -1,6 +1,7 @@
 # --- dependencies / OS noise ---
 node_modules/
 .DS_Store
+.idea/
 
 # --- personal local config (per-machine, not shared) ---
 .claude/settings.local.json

@@ -327,7 +327,10 @@ motion-policy:
   allowed:
     - dotted-rule-draw         # one-time line-draw on chapter divider
     - drop-cap-fade            # 1s opacity from 0 → 1 on slide enter
+    - paper-depth-parallax     # ≤ 2 print layers, ≤ 8px offset on slide enter — layered paper collage, not web depth
   forbidden:
+    - mouse-tracked-parallax   # cursor-reactive depth is web-era; the page is print
+    - particle-converge-glyph
     - glass-morphism
     - rotating-glow-border
     - particle-background
@@ -341,7 +344,7 @@ motion-policy:
     continuous-animations-per-slide: 0
     slides-with-effects: 30        # only entrance reveals + paper grain
   reduced-motion:
-    disable: [fade-up-entrance, intersection-reveal, dotted-rule-draw, drop-cap-fade]
+    disable: [fade-up-entrance, intersection-reveal, dotted-rule-draw, drop-cap-fade, paper-depth-parallax]
     keep:    [paper-grain-overlay]
 ```
 

@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Depth Parallax Engine — Pilot Deck</title>
+<link rel="stylesheet" href="../../../../../node_modules/reveal.js/dist/reset.css">
+<link rel="stylesheet" href="../../../../../node_modules/reveal.js/dist/reveal.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;500;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Noto+Sans+TC:wght@300;400;500&display=swap">
+<style>
+  /* == tech-mystery tokens (.claude/styles/tech-mystery/tokens.md) ================= */
+  :root {
+    --bg-base: #05070d; --bg-surface: #0b1020; --bg-elevated: #131a30; --bg-trace: #1c2647;
+    --text-primary: #e7eefb; --text-secondary: #9aa9c7; --text-muted: #5e6c8a;
+    --accent-cyan: #22d3ee; --accent-magenta: #e879f9; --accent-violet: #8b5cf6;
+    --glow-1: rgba(34,211,238,0.35); --glow-2: rgba(139,92,246,0.30); --glow-3: rgba(232,121,249,0.28);
+    --border-fine: rgba(180,210,255,0.10); --border-glow: rgba(34,211,238,0.50);
+  }
+  .reveal-viewport { background: var(--bg-base); }
+  .reveal { font-family: "Inter", "Noto Sans TC", system-ui, sans-serif; color: var(--text-primary); font-size: 17px; }
+  .reveal h1, .reveal h2, .display { font-family: "Space Grotesk", "Noto Sans TC", sans-serif; font-weight: 500; letter-spacing: -0.02em; text-transform: none; }
+  .mono, .eyebrow { font-family: "JetBrains Mono", "Noto Sans TC", monospace; }
+  /* full-canvas sections: deco layers span the whole 960×700 box and the gate's
+     descendant-rect check sees zero bottom/right poke */
+  .reveal .slides section { padding: 64px 80px; box-sizing: border-box; height: 100%; }
+
+  /* vignette (tokens 6.3) */
+  body::after { content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 40;
+    background: radial-gradient(ellipse at center, transparent 50%, rgba(0,0,0,0.55) 100%); }
+
+  /* == gate-safe decoration containment + parallax layers (visual-effects SKILL) === */
+  .deco-layer { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 0; }
+  .deco-layer > * { position: absolute; }
+  /* inset 0, never oversized: the layout gate rect-checks every descendant with no
+     decorative exemption. Fills fade out before the edges, so travel exposes nothing. */
+  .parallax-layer { position: absolute; inset: 0; will-change: transform; }
+  section > .content { position: relative; z-index: 1; height: 100%; display: flex; flex-direction: column; justify-content: center; min-height: 0; }
+  .particle-bg, .glyph-canvas { width: 100%; height: 100%; display: block; }
+
+  .hairline-grid {
+    inset: 0;
+    background-image: linear-gradient(var(--bg-trace) 1px, transparent 1px),
+      linear-gradient(90deg, var(--bg-trace) 1px, transparent 1px);
+    background-size: 64px 64px; opacity: 0.2;
+    -webkit-mask-image: radial-gradient(ellipse at center, black 30%, transparent 75%);
+    mask-image: radial-gradient(ellipse at center, black 30%, transparent 75%);
+  }
+  .mesh-fill { inset: 0; background:
+    radial-gradient(at 20% 30%, rgba(34,211,238,0.10) 0%, transparent 50%),
+    radial-gradient(at 80% 20%, rgba(139,92,246,0.10) 0%, transparent 50%),
+    radial-gradient(at 55% 85%, rgba(232,121,249,0.07) 0%, transparent 55%); }
+  .orb { border-radius: 50%; filter: blur(2px); }
+  .orb-a { width: 120px; height: 120px; left: 8%; top: 14%; background: radial-gradient(circle, var(--glow-2), transparent 70%); }
+  .orb-b { width: 90px; height: 90px; right: 10%; bottom: 16%; background: radial-gradient(circle, var(--glow-1), transparent 70%); }
+  .orb-c { width: 60px; height: 60px; right: 22%; top: 22%; background: radial-gradient(circle, var(--glow-3), transparent 70%); }
+
+  /* == typography helpers ========================================================== */
+  .eyebrow { font-size: 11px; font-weight: 500; letter-spacing: 0.32em; text-transform: uppercase; color: var(--accent-cyan); }
+  .gradient-text { background: linear-gradient(135deg, var(--accent-cyan), var(--accent-violet), var(--accent-magenta));
+    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+  .reveal h1 { font-size: 72px; line-height: 0.98; font-weight: 300; margin: 18px 0 10px; }
+  .reveal h2 { font-size: 42px; line-height: 1.05; margin: 0 0 24px; }
+  .zh-sub { font-family: "Noto Sans TC", sans-serif; font-weight: 300; font-size: 26px; letter-spacing: 0.04em; color: var(--text-secondary); margin: 6px 0 0; }
+  .meta { font-family: "JetBrains Mono", monospace; font-size: 12px; color: var(--text-muted); margin-top: 40px; }
+  .reveal p, .reveal li { color: var(--text-secondary); line-height: 1.65; }
+
+  /* == glass card (tokens 5.1) ===================================================== */
+  .glass-card { background: linear-gradient(180deg, rgba(19,26,48,0.65), rgba(11,16,32,0.55));
+    backdrop-filter: blur(18px) saturate(160%); -webkit-backdrop-filter: blur(18px) saturate(160%);
+    border: 1px solid var(--border-fine); border-radius: 18px; padding: 28px;
+    min-height: 0; overflow: hidden; box-sizing: border-box; text-align: left; }
+  .card-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 24px; min-height: 0; }
+  .card-grid > * { min-width: 0; min-height: 0; overflow: hidden; }
+  .card-kicker { font-family: "JetBrains Mono", monospace; font-size: 11px; letter-spacing: 0.24em; color: var(--accent-cyan); text-transform: uppercase; }
+  .glass-card h3 { font-family: "Space Grotesk", "Noto Sans TC", sans-serif; font-size: 21px; font-weight: 500; margin: 10px 0 8px; color: var(--text-primary); }
+  .glass-card p { font-size: 15px; margin: 0; }
+
+  /* == rotating glow border (≤ 2 per deck: hero frame + takeaway card) ============ */
+  @property --angle { syntax: "<angle>"; initial-value: 0deg; inherits: false; }
+  .glow-border { position: relative; }
+  .glow-border::before { content: ""; position: absolute; inset: -2px; border-radius: inherit; z-index: -1;
+    background: conic-gradient(from var(--angle), var(--glow-1), var(--glow-2), var(--glow-3), var(--glow-1));
+    animation: rotate-glow 4s linear infinite; }
+  @keyframes rotate-glow { to { --angle: 360deg; } }
+  .hero-frame { inset: 28px; border-radius: 24px; border: 1px solid var(--border-fine); }
+  .hero-frame::before { content: ""; position: absolute; inset: -1px; border-radius: inherit;
+    padding: 1px; background: conic-gradient(from var(--angle), var(--glow-1), transparent 30%, var(--glow-2) 50%, transparent 70%, var(--glow-1));
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor; mask-composite: exclude;
+    animation: rotate-glow 6s linear infinite; }
+
+  /* == pulse glow (stat values, divider numeral) =================================== */
+  @keyframes pulse-num { 0%,100% { text-shadow: 0 0 12px var(--glow-1); } 50% { text-shadow: 0 0 28px rgba(34,211,238,0.65), 0 0 56px var(--glow-2); } }
+  .pulse-glow { animation: pulse-num 4s ease-in-out infinite; }
+  @keyframes pulse-line { 0%,100% { opacity: 0.35; } 50% { opacity: 1; } }
+
+  /* == chapter divider ============================================================= */
+  .divider-num { font-family: "Space Grotesk", monospace; font-size: 150px; font-weight: 300; line-height: 1; color: var(--accent-cyan); font-feature-settings: "tnum"; }
+
+  /* == stat strip (tokens 7.3) ===================================================== */
+  .stat-strip { display: grid; grid-template-columns: repeat(4, 1fr); min-height: 0; margin-top: 28px; }
+  .stat-strip > div { border-right: 1px solid var(--border-fine); padding: 0 18px; min-width: 0; overflow: hidden; }
+  .stat-strip > div:last-child { border-right: none; }
+  .stat-value { font-family: "Space Grotesk", sans-serif; font-feature-settings: "tnum"; font-size: 56px; font-weight: 300; color: var(--accent-cyan); line-height: 1; letter-spacing: -0.01em; }
+  .stat-unit { font-family: "JetBrains Mono", monospace; font-size: 14px; color: var(--text-muted); margin: 6px 0 10px; }
+  .stat-label { font-size: 15px; color: var(--text-secondary); }
+
+  .end-line { width: 180px; height: 1px; margin: 26px auto 0;
+    background: linear-gradient(90deg, transparent, rgba(34,211,238,0.4), transparent);
+    animation: pulse-line 4s ease-in-out infinite; }
+  .takeaway-list { list-style: none; padding: 0; margin: 14px 0 0; }
+  .takeaway-list li { margin: 10px 0; padding-left: 22px; position: relative; font-size: 17px; }
+  .takeaway-list li::before { content: "→"; position: absolute; left: 0; color: var(--accent-cyan); }
+
+  /* == reduced motion (mandatory) ================================================== */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+  }
+</style>
+</head>
+<body>
+<div class="reveal">
+  <div class="slides">
+
+    <!-- S1 · hero cover -->
+    <section data-transition="fade">
+      <div class="deco-layer parallax-scene" aria-hidden="true">
+        <div class="parallax-layer" data-depth="0.15"><div class="mesh-fill"></div><div class="hairline-grid"></div></div>
+        <div class="parallax-layer" data-depth="0.4"><canvas class="particle-bg"></canvas></div>
+        <div class="parallax-layer" data-depth="0.55"><canvas class="glyph-canvas" data-glyph="PS" data-glyph-alpha="0.5"></canvas></div>
+        <div class="parallax-layer" data-depth="0.75"><div class="orb orb-a"></div><div class="orb orb-b"></div></div>
+        <div class="hero-frame"></div>
+      </div>
+      <div class="content" style="text-align:center;">
+        <div class="eyebrow">Presentation Studio · Parallax Pilot</div>
+        <h1 class="gradient-text display">DEPTH PARALLAX ENGINE</h1>
+        <p class="zh-sub">視差引擎試驗 — 深度分層 × 滑鼠攝影機 × 粒子聚合</p>
+        <div class="meta">2026-07-04 · style: tech-mystery · gates: layout + render</div>
+      </div>
+      <aside class="notes">Pilot 自證用 deck。模式出處:.claude/skills/visual-effects/SKILL.md — Depth Parallax System、Particle Converge Glyph。無外部事實宣稱。</aside>
+    </section>
+
+    <!-- S2 · content: layers (auto-animate pair 1/2) -->
+    <section data-auto-animate>
+      <div class="deco-layer parallax-scene" aria-hidden="true">
+        <div class="parallax-layer" data-depth="0.15"><div class="mesh-fill"></div></div>
+        <div class="parallax-layer" data-depth="0.4"><canvas class="particle-bg"></canvas></div>
+        <div class="parallax-layer" data-depth="0.8"><div class="orb orb-c"></div></div>
+      </div>
+      <div class="content">
+        <div class="eyebrow" data-id="eyebrow">01 · Layer Model</div>
+        <h2 data-id="sys" style="font-size:42px;">什麼在動 <span class="gradient-text">WHAT MOVES</span></h2>
+        <div class="card-grid">
+          <div class="glass-card fragment fade-up">
+            <div class="card-kicker">FAR · 0.1–0.4</div>
+            <h3>遠景層</h3>
+            <p>Mesh 漸層、髮絲網格、粒子場。滿版填充只能放這裡。</p>
+          </div>
+          <div class="glass-card fragment fade-up">
+            <div class="card-kicker">MID · 0.4–0.6</div>
+            <h3>中景層</h3>
+            <p>粒子 canvas 與字形聚合的主要舞台。</p>
+          </div>
+          <div class="glass-card fragment fade-up">
+            <div class="card-kicker">NEAR · 0.6–0.9</div>
+            <h3>近景層</h3>
+            <p>只放稀疏光暈。位移最大,靠 -8% oversize 吃掉邊緣。</p>
+          </div>
+        </div>
+      </div>
+      <aside class="notes">層級規格出處:SKILL.md Depth Parallax System — Layer Markup 與 Parallax Caps。</aside>
+    </section>
+
+    <!-- S3 · content: motion sources (auto-animate pair 2/2) -->
+    <section data-auto-animate>
+      <div class="deco-layer parallax-scene" aria-hidden="true">
+        <div class="parallax-layer" data-depth="0.15"><div class="mesh-fill"></div></div>
+        <div class="parallax-layer" data-depth="0.4"><canvas class="particle-bg"></canvas></div>
+        <div class="parallax-layer" data-depth="0.8"><div class="orb orb-b"></div></div>
+      </div>
+      <div class="content">
+        <div class="eyebrow" data-id="eyebrow">01 · Motion Sources</div>
+        <h2 data-id="sys" style="font-size:56px;">什麼在動 <span class="gradient-text">WHAT MOVES</span></h2>
+        <div class="card-grid" style="grid-template-columns:1fr 1fr;">
+          <div class="glass-card">
+            <div class="card-kicker">SOURCE A</div>
+            <h3>滑鼠攝影機</h3>
+            <p>Lerp 追指標,靜止時 rAF 自動停 — 零無限迴圈,gate 截圖穩定。</p>
+          </div>
+          <div class="glass-card">
+            <div class="card-kicker">SOURCE B</div>
+            <h3>換頁景深</h3>
+            <p>每層依深度以不同位移入場,0.9s 完成 — 深度感不需要捲動。</p>
+          </div>
+        </div>
+      </div>
+      <aside class="notes">兩種驅動皆事件驅動;規格出處同 S2。auto-animate pair:data-id="sys" 標題 morph。</aside>
+    </section>
+
+    <!-- S4 · chapter divider -->
+    <section data-transition="zoom-in fade-out">
+      <div class="deco-layer parallax-scene" aria-hidden="true">
+        <div class="parallax-layer" data-depth="0.2"><div class="mesh-fill"></div></div>
+        <div class="parallax-layer" data-depth="0.45"><canvas class="glyph-canvas" data-glyph="02" data-glyph-alpha="0.4"></canvas></div>
+        <div class="parallax-layer" data-depth="0.75"><div class="orb orb-a"></div><div class="orb orb-c"></div></div>
+      </div>
+      <div class="content" style="text-align:center;">
+        <div class="eyebrow">Chapter 02 · 章 二</div>
+        <div class="divider-num pulse-glow" style="margin:18px 0 8px;">02</div>
+        <h2 class="gradient-text" style="font-weight:300;">PARTICLE CHOREOGRAPHY · 粒子編排</h2>
+      </div>
+      <aside class="notes">章節分隔頁:粒子聚合成「02」殘影疊在實心數字後(canvas 純裝飾,真標題是 HTML 文字)。</aside>
+    </section>
+
+    <!-- S5 · stat strip -->
+    <section data-transition="slide">
+      <div class="deco-layer parallax-scene" aria-hidden="true">
+        <div class="parallax-layer" data-depth="0.15"><div class="mesh-fill"></div><div class="hairline-grid"></div></div>
+        <div class="parallax-layer" data-depth="0.4"><canvas class="particle-bg"></canvas></div>
+      </div>
+      <div class="content">
+        <div class="eyebrow">02 · Engine Constraints</div>
+        <h2>硬上限 <span class="gradient-text">HARD CAPS</span></h2>
+        <div class="stat-strip">
+          <div>
+            <div class="stat-value pulse-glow">4</div>
+            <div class="stat-unit">LAYERS / SLIDE</div>
+            <div class="stat-label">視差層上限</div>
+          </div>
+          <div>
+            <div class="stat-value pulse-glow">0</div>
+            <div class="stat-unit">INFINITE LOOPS</div>
+            <div class="stat-label">全部事件驅動</div>
+          </div>
+          <div>
+            <div class="stat-value">2000</div>
+            <div class="stat-unit">PARTICLES MAX</div>
+            <div class="stat-label">字形聚合粒子數</div>
+          </div>
+          <div>
+            <div class="stat-value">6</div>
+            <div class="stat-unit">GATE VIEWPORTS</div>
+            <div class="stat-label">版面驗證視窗</div>
+          </div>
+        </div>
+      </div>
+      <aside class="notes">數值出處:rules/visual-effects-standard.md(Depth Parallax Default、Particle Choreography)、rules/layout-gate.md(六視窗)。皆為內部規格,非外部事實。</aside>
+    </section>
+
+    <!-- S6 · takeaway -->
+    <section data-transition="fade">
+      <div class="deco-layer parallax-scene" aria-hidden="true">
+        <div class="parallax-layer" data-depth="0.15"><div class="mesh-fill"></div></div>
+        <div class="parallax-layer" data-depth="0.4"><canvas class="particle-bg"></canvas></div>
+        <div class="parallax-layer" data-depth="0.7"><div class="orb orb-b"></div></div>
+      </div>
+      <div class="content" style="align-items:center;">
+        <div class="glass-card glow-border" style="border-radius:18px; max-width:640px;">
+          <div class="card-kicker">Key Takeaway</div>
+          <h3 style="font-size:26px;">視差是調味,不是主菜</h3>
+          <ul class="takeaway-list">
+            <li>位移封頂:滑鼠 ±60px×depth、換頁 80px×depth</li>
+            <li>裝飾全部關進 gate-safe 的 <span class="mono">.deco-layer</span></li>
+            <li><span class="mono">prefers-reduced-motion</span> 下靜止呈現</li>
+          </ul>
+        </div>
+      </div>
+      <aside class="notes">Rotating glow border 第 2 處(上限 2)。規格出處:SKILL.md Parallax Caps。</aside>
+    </section>
+
+    <!-- S7 · end -->
+    <section data-transition="fade">
+      <div class="deco-layer parallax-scene" aria-hidden="true">
+        <div class="parallax-layer" data-depth="0.2"><div class="mesh-fill"></div></div>
+        <div class="parallax-layer" data-depth="0.6"><div class="orb orb-c"></div></div>
+      </div>
+      <div class="content" style="text-align:center;">
+        <div class="display" style="font-size:44px; font-weight:300; letter-spacing:0.1em;">「 END · 終 」</div>
+        <div class="end-line"></div>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+<script src="../../../../../node_modules/reveal.js/dist/reveal.js"></script>
+<script>
+  Reveal.initialize({
+    width: 960, height: 700,
+    minScale: 0.1, maxScale: 2.0,
+    hash: false, controls: true, progress: true,
+    transition: 'slide',
+    autoAnimateEasing: 'cubic-bezier(0.22,1,0.36,1)',
+    autoAnimateDuration: 0.8,
+    autoAnimateUnmatched: true
+  });
+</script>
+<!--
+  Layout Auto-Fit Snippet (Layer 3 of rules/responsive-auto-fit.md)
+  ---------------------------------------------------------------
+  Drop this <script> block immediately after Reveal.initialize(). Pair with:
+    - Reveal config: minScale: 0.1, maxScale: 2.0
+    - Card/grid CSS: min-height: 0; overflow: hidden;
+  After integration, run:
+    node .claude/skills/layout-gate/scripts/layout-gate.cjs path/to/index.html
+  Gate must exit 0 before the deliverable is shippable.
+-->
+<script>
+  (function installAutoFit() {
+    const FLOOR = 0.55;
+
+    function fitSlide(section) {
+      // Reset before measuring (avoid compounding scale).
+      section.style.transform = '';
+      section.style.transformOrigin = '';
+      const sh = section.scrollHeight;
+      const ch = section.clientHeight;
+      if (sh > ch && ch > 0) {
+        const ratio = Math.max(FLOOR, ch / sh);
+        section.style.transformOrigin = 'center center';
+        section.style.transform = 'scale(' + ratio + ')';
+      }
+    }
+
+    function fitAll() {
+      document.querySelectorAll('.reveal .slides section').forEach(fitSlide);
+    }
+
+    // Mark presence for layout-gate detection.
+    window.__layoutAutoFitInstalled = true;
+
+    if (typeof Reveal !== 'undefined') {
+      Reveal.on('ready', () => setTimeout(fitAll, 200));
+      Reveal.on('slidechanged', (e) => {
+        requestAnimationFrame(() => e.currentSlide && fitSlide(e.currentSlide));
+      });
+    }
+    let resizeTimer;
+    window.addEventListener('resize', () => {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(fitAll, 150);
+    });
+  })();
+</script>
+<script>
+  /* == Depth Parallax System + Particle Choreography ==============================
+     Reference implementation of .claude/skills/visual-effects/SKILL.md:
+     - Mouse Camera (lerp, auto-stopping rAF, reduced-motion guard)
+     - Slide-Transition Depth (WAAPI, onfinish cancel)
+     - Particle Converge Glyph (2D canvas, terminating loop)
+     - Particle field per tokens 6.1 (pause on hidden slides)
+  ================================================================================ */
+  const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* -- mouse camera -- */
+  function initMouseParallax() {
+    if (REDUCED) return;
+    let tx = 0, ty = 0, cx = 0, cy = 0, raf = null;
+    addEventListener('mousemove', e => {
+      tx = e.clientX / innerWidth - 0.5; ty = e.clientY / innerHeight - 0.5;
+      if (!raf) raf = requestAnimationFrame(step);
+    }, { passive: true });
+    function step() {
+      cx += (tx - cx) * 0.08; cy += (ty - cy) * 0.08;
+      const slide = Reveal.getCurrentSlide();
+      if (slide) slide.querySelectorAll('.parallax-layer').forEach(l => {
+        const d = +l.dataset.depth || 0.3;
+        l.style.transform = `translate3d(${(-cx * 60 * d).toFixed(2)}px, ${(-cy * 40 * d).toFixed(2)}px, 0)`;
+      });
+      raf = Math.abs(tx - cx) + Math.abs(ty - cy) > 0.002 ? requestAnimationFrame(step) : null;
+    }
+  }
+
+  /* -- slide-transition depth offsets --
+     Layers always enter from the LEFT: the layout gate measures descendant rects 350ms
+     after navigation and only bottom/right overflow counts, so a left-side offset can
+     never trip it even mid-animation. */
+  function depthEntrance(e) {
+    if (REDUCED) return;
+    e.currentSlide.querySelectorAll('.parallax-layer').forEach(l => {
+      const d = +l.dataset.depth || 0.3;
+      const a = l.animate(
+        [{ transform: `translate3d(${-80 * d}px,0,0)`, opacity: 0.4 },
+         { transform: 'translate3d(0,0,0)', opacity: 1 }],
+        { duration: 900, easing: 'cubic-bezier(0.22,1,0.36,1)' });
+      a.onfinish = () => a.cancel();  // release WAAPI override so the mouse camera regains control
+    });
+  }
+
+  /* -- ambient particle field (tokens 6.1: 70% cyan / 25% violet / 5% magenta) -- */
+  function initParticleField(canvas, count = 40) {
+    const ctx = canvas.getContext('2d');
+    canvas.width = canvas.offsetWidth; canvas.height = canvas.offsetHeight;
+    if (!canvas.width || !canvas.height) return;
+    const pick = () => { const r = Math.random();
+      return r < 0.70 ? ['34,211,238', 0.20] : r < 0.95 ? ['139,92,246', 0.18] : ['232,121,249', 0.15]; };
+    const ps = Array.from({ length: count }, () => {
+      const c = pick();
+      return { x: Math.random() * canvas.width, y: Math.random() * canvas.height,
+               vx: (Math.random() - 0.5) * 0.5, vy: (Math.random() - 0.5) * 0.5,
+               r: Math.random() * 2 + 1, rgb: c[0], a: c[1] };
+    });
+    function draw(move) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ps.forEach(p => {
+        if (move) {
+          p.x += p.vx; p.y += p.vy;
+          if (p.x < 0 || p.x > canvas.width) p.vx *= -1;
+          if (p.y < 0 || p.y > canvas.height) p.vy *= -1;
+        }
+        ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(${p.rgb},${p.a})`; ctx.fill();
+      });
+    }
+    draw(false);                       // always paint one static frame (render gate + reduced motion)
+    if (REDUCED) return;
+    (function loop() {
+      const sec = canvas.closest('section');
+      if (!sec || sec.classList.contains('present')) draw(true);   // pause when slide hidden
+      requestAnimationFrame(loop);
+    })();
+  }
+
+  /* -- particle converge glyph (terminating loop, ≤ 2000 particles) -- */
+  function particleGlyph(canvas, glyph, opts = {}) {
+    const { color = '34,211,238', alpha = 0.5, count = 1600, dur = 1800 } = opts;
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width = canvas.offsetWidth, H = canvas.height = canvas.offsetHeight;
+    if (!W || !H) return;
+    const off = document.createElement('canvas'); off.width = W; off.height = H;
+    const o = off.getContext('2d');
+    o.font = `300 ${Math.floor(H * 0.55)}px "Space Grotesk", sans-serif`;
+    o.textAlign = 'center'; o.textBaseline = 'middle';
+    o.fillText(glyph, W / 2, H / 2);
+    const px = o.getImageData(0, 0, W, H).data;
+    let targets = [];
+    for (let y = 0; y < H; y += 4) for (let x = 0; x < W; x += 4)
+      if (px[(y * W + x) * 4 + 3] > 128) targets.push({ x, y });
+    const keep = Math.max(1, Math.ceil(targets.length / count));
+    targets = targets.filter((_, i) => i % keep === 0);            // decimate to ≤ count
+    const ps = targets.map(t => ({ t,
+      x: W / 2 + (Math.random() - 0.5) * W * 1.4,
+      y: H / 2 + (Math.random() - 0.5) * H * 1.4 }));
+    if (REDUCED) {
+      ctx.clearRect(0, 0, W, H); ctx.fillStyle = `rgba(${color},${alpha})`;
+      ps.forEach(p => ctx.fillRect(p.t.x, p.t.y, 1.8, 1.8));       // static end state, single frame
+      return;
+    }
+    let start = null;
+    function step(ts) {
+      start ??= ts;
+      const k = Math.min(1, (ts - start) / dur), e = 1 - (1 - k) ** 3;
+      ctx.clearRect(0, 0, W, H); ctx.fillStyle = `rgba(${color},${alpha})`;
+      ps.forEach(p => {
+        ctx.globalAlpha = 0.3 + 0.7 * e;
+        ctx.fillRect(p.x + (p.t.x - p.x) * e, p.y + (p.t.y - p.y) * e, 1.8, 1.8);
+      });
+      ctx.globalAlpha = 1;
+      if (k < 1) requestAnimationFrame(step);                      // loop TERMINATES at convergence
+    }
+    requestAnimationFrame(step);
+  }
+
+  /* -- per-slide effect bootstrap (hidden slides have zero size; init on entry) -- */
+  function initSlideFx(slide) {
+    if (!slide) return;
+    slide.querySelectorAll('canvas.particle-bg:not([data-inited])').forEach(c => {
+      c.dataset.inited = '1'; initParticleField(c);
+    });
+    slide.querySelectorAll('canvas.glyph-canvas').forEach(c => {
+      document.fonts.ready.then(() => particleGlyph(c, c.dataset.glyph || 'PS', { alpha: +c.dataset.glyphAlpha || 0.5 }));
+    });
+  }
+
+  Reveal.on('ready', e => { initSlideFx(e.currentSlide); initMouseParallax(); });
+  Reveal.on('slidechanged', e => { initSlideFx(e.currentSlide); depthEntrance(e); });
+</script>
+</body>
+</html>

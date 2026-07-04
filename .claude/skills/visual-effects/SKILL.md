@@ -1,6 +1,6 @@
 ---
 name: Premium Visual Effects
-description: Provides CSS animation patterns, glass morphism, SVG animation, particle systems, and reveal.js advanced effects for premium presentations
+description: Provides CSS animation patterns, glass morphism, SVG animation, particle systems, depth parallax, and reveal.js advanced effects for premium presentations
 ---
 
 # Premium Visual Effects
@@ -90,6 +90,101 @@ Stroke draw: animate `stroke-dashoffset` from path length to 0. Set `--path-leng
 .tilt-entrance { animation: tilt-in 0.8s cubic-bezier(0.22,1,0.36,1) forwards; }
 ```
 
+## Depth Parallax System
+
+Multi-layer camera depth (the Active-Theory look) — a default effect category per
+`rules/visual-effects-standard.md`. Each style's `motion-policy` names its own expression
+(`depth-parallax`, `subtle-depth-parallax`, `paper-depth-parallax`, `geometric-layer-parallax`)
+or forbids it. Two motion sources, both event-driven — zero infinite loops.
+
+### Layer Markup
+
+Parallax layers are decorations: they live inside the gate-safe `.deco-layer` wrapper (see
+Gate-Safe Decoration Containment), never in the content flow.
+
+```html
+<section>
+  <div class="deco-layer parallax-scene" aria-hidden="true">
+    <div class="parallax-layer" data-depth="0.15"><!-- far: full-bleed mesh, hairline grid --></div>
+    <div class="parallax-layer" data-depth="0.4"><canvas class="particle-bg"></canvas></div>
+    <div class="parallax-layer" data-depth="0.8"><!-- near: sparse glow orbs only --></div>
+  </div>
+  <div class="content">…</div>
+</section>
+```
+
+```css
+.reveal .slides section { height: 100%; }   /* sections span the full canvas, not content height */
+.parallax-layer { position: absolute; inset: 0; will-change: transform; }
+```
+
+Never oversize layers (no negative inset): the layout gate rect-checks EVERY descendant
+against the slide box — bottom/right poke > 2px fails, and the decorative exemption applies
+only to the overlap check, not the overflow check (verified on parallax-pilot-deck: 7/7
+slides FAILed at `inset: -8%`, PASS at `inset: 0`). Sections need explicit full height,
+otherwise the content-sized section box makes even `inset: 0` layers overflow. Design fills
+to fade out before the edges (radial fade, masked grid) — on dark bases, travel then exposes
+nothing. Full-bleed fills belong on far layers (`data-depth` ≤ 0.4); near layers (0.6–0.9)
+carry sparse shapes kept ≥ 60px from the right/bottom edges.
+
+### Mouse Camera
+
+Lerp toward the pointer; the rAF loop stops when settled — input-driven motion counts as
+zero continuous animations and leaves gate screenshots stable.
+
+```js
+function initMouseParallax() {
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  let tx = 0, ty = 0, cx = 0, cy = 0, raf = null;
+  addEventListener('mousemove', e => {
+    tx = e.clientX / innerWidth - 0.5; ty = e.clientY / innerHeight - 0.5;
+    if (!raf) raf = requestAnimationFrame(step);
+  }, { passive: true });
+  function step() {
+    cx += (tx - cx) * 0.08; cy += (ty - cy) * 0.08;
+    const slide = Reveal.getCurrentSlide();
+    if (slide) slide.querySelectorAll('.parallax-layer').forEach(l => {
+      const d = +l.dataset.depth || 0.3;
+      l.style.transform = `translate3d(${(-cx*60*d).toFixed(2)}px, ${(-cy*40*d).toFixed(2)}px, 0)`;
+    });
+    raf = Math.abs(tx-cx) + Math.abs(ty-cy) > 0.002 ? requestAnimationFrame(step) : null;
+  }
+}
+```
+
+### Slide-Transition Depth
+
+Layers enter at depth-proportional offsets on every slide change — the depth illusion works
+without scroll, which is what makes parallax fit the slide medium. Layers always enter from
+the LEFT: the gate measures descendant rects 350ms after navigation (mid-animation) and only
+bottom/right overflow counts, so a left-side offset can never trip it; a direction-aware
+right-side entry gets caught mid-flight.
+
+```js
+Reveal.on('slidechanged', e => {
+  e.currentSlide.querySelectorAll('.parallax-layer').forEach(l => {
+    const d = +l.dataset.depth || 0.3;
+    const a = l.animate(
+      [{ transform: `translate3d(${-80*d}px,0,0)`, opacity: 0.4 },
+       { transform: 'translate3d(0,0,0)', opacity: 1 }],
+      { duration: 900, easing: 'cubic-bezier(0.22,1,0.36,1)' });
+    a.onfinish = () => a.cancel();   // release the WAAPI override so the mouse camera regains control
+  });
+});
+```
+
+### Parallax Caps
+
+- ≤ 4 layers per slide, `data-depth` 0.1–0.9, `translate3d` only.
+- Mouse travel caps at ±60px × depth; transition offset at 80px × depth, entering leftward.
+  The gate runs pointer-free, so mouse travel never affects measurement — but keep near-layer
+  decorations ≥ 60px from right/bottom edges so travel doesn't visibly clip.
+- Entrance completes in ≤ 1.5s (0.9s above) per the entrance-timing rule.
+- Reduced motion: the guard clause is mandatory; layers render at rest.
+- Reference implementation (both gates PASS, 6 viewports / 7 slides): `examples/parallax-pilot-deck/`
+  in this skill folder — copy it into `output/<project>/` as the starting skeleton and re-run the
+  gates there. Gate reports are regenerated per run and stay untracked by design.
+
 ## Reveal.js Advanced Features
 
 ### Auto-Animate
@@ -152,6 +247,58 @@ function initParticles(canvas, count = 40) {
 }
 ```
 
+### Particle Converge Glyph (cover & section slides, opt-in)
+
+The "particles assemble into a mark" moment in plain 2D canvas — no WebGL, no library,
+headless-gate-safe. Draw the glyph offscreen, sample opaque pixels, fly particles home.
+The real heading stays HTML text in `.content`; the canvas is pure decoration inside
+`.deco-layer`, so reduced-motion and the render gate never depend on it.
+
+```js
+function particleGlyph(canvas, glyph, opts = {}) {
+  const { color = '#22d3ee', count = 1600, dur = 1800,
+          font = `300 ${Math.floor(canvas.offsetHeight * 0.55)}px "Space Grotesk", sans-serif` } = opts;
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width = canvas.offsetWidth, H = canvas.height = canvas.offsetHeight;
+  const off = document.createElement('canvas'); off.width = W; off.height = H;
+  const o = off.getContext('2d');
+  o.font = font; o.textAlign = 'center'; o.textBaseline = 'middle';
+  o.fillText(glyph, W / 2, H / 2);
+  const px = o.getImageData(0, 0, W, H).data;
+  let targets = [];
+  for (let y = 0; y < H; y += 4) for (let x = 0; x < W; x += 4)
+    if (px[(y * W + x) * 4 + 3] > 128) targets.push({ x, y });
+  const keep = Math.max(1, Math.ceil(targets.length / count));
+  targets = targets.filter((_, i) => i % keep === 0);   // decimate to ≤ count
+  const ps = targets.map(t => ({ t,
+    x: W / 2 + (Math.random() - 0.5) * W * 1.4,
+    y: H / 2 + (Math.random() - 0.5) * H * 1.4 }));
+  ctx.fillStyle = color;
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    ps.forEach(p => ctx.fillRect(p.t.x, p.t.y, 1.8, 1.8));   // static end state, single frame
+    return;
+  }
+  let start = null;
+  function step(ts) {
+    start ??= ts;
+    const k = Math.min(1, (ts - start) / dur), e = 1 - (1 - k) ** 3;
+    ctx.clearRect(0, 0, W, H); ctx.fillStyle = color;
+    ps.forEach(p => {
+      ctx.globalAlpha = 0.3 + 0.7 * e;
+      ctx.fillRect(p.x + (p.t.x - p.x) * e, p.y + (p.t.y - p.y) * e, 1.8, 1.8);
+    });
+    if (k < 1) requestAnimationFrame(step);   // the loop TERMINATES at convergence — mandatory
+  }
+  requestAnimationFrame(step);
+}
+```
+
+Rules: ≤ 2000 particles; run once per slide entry (`slidechanged`); dissolve-out is the same
+interpolation reversed. WebGL / three.js particle systems are an escalation, not a default —
+they require explicit user approval, deck-bundle vendoring, and a render-gate pilot first
+(headless Chrome renders GL via SwiftShader: slow screenshots and blank-canvas false FAILs
+are real risks).
+
 ### Animated Gradient Background
 
 ```css
@@ -201,6 +348,12 @@ Two rules, both mandatory:
    `deco|background|bg-|overlay|particle|vignette|grid`) exempts the layer from the gate's
    text/media overlap check. An unmarked background SVG under live text is flagged as a collision
    — the gate cannot tell intent, only markup.
+3. **Fit inside the slide box anyway.** The wrapper's `overflow: hidden` kills scroll-metric
+   inflation, but the gate ALSO rect-checks every descendant with NO decorative exemption —
+   bottom/right poke > 2px fails (left/top poke is not measured). Decorations must genuinely
+   rest within the slide box; give sections `height: 100%` so that box is the full canvas.
+   Anything that must bleed past the canvas belongs on reveal's `data-background-*` layer,
+   which the gate does not measure.
 
 ## Performance Guidelines
 

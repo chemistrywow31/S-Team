@@ -18,7 +18,7 @@ paths:
 Every project locks in a style at intake (per CLAUDE.md Style System). The chosen style's `tokens.md` contains a `motion-policy:` YAML block defining `required:`, `allowed:`, `forbidden:`, `density:`, and `reduced-motion:` lists. **The style's policy overrides this rule's defaults below.** When a default in this rule conflicts with the locked-in style's policy, follow the style.
 
 Examples:
-- `tech-mystery` requires glass morphism, rotating glow, particles, gradient text, pulse glow — the defaults below apply directly.
+- `tech-mystery` requires glass morphism, rotating glow, particles, gradient text, pulse glow, depth parallax — the defaults below apply directly.
 - `minimal-modern` forbids glass / glow / particles / gradients — its policy sets `slides-with-effects: 60` and `continuous-animations-per-slide: 0`. Defaults are superseded.
 - `editorial` forbids almost all effects in this rule — only entrance fades + paper grain are permitted.
 
@@ -26,7 +26,22 @@ QA Reviewer must read `.claude/styles/<chosen-style>/tokens.md` Section 8 (`Moti
 
 ### Default Effect Coverage (applies unless overridden by style)
 
-At least 80% of content slides must include one or more visual effects (CSS animation, SVG animation, glass morphism, gradient, particle background, or neon glow). Count content slides only — exclude title, section divider, and closing slides.
+At least 80% of content slides must include one or more visual effects (CSS animation, SVG animation, glass morphism, gradient, particle background, depth parallax, or neon glow). Count content slides only — exclude title, section divider, and closing slides.
+
+### Depth Parallax Default (applies unless overridden by style)
+
+Every HTML deck includes multi-layer depth parallax per `skills/visual-effects/SKILL.md` (Depth Parallax System):
+
+- The cover slide and every section divider carry a `.parallax-scene` with ≥ 2 depth layers; content slides may extend it.
+- Two motion sources, deck-wide: mouse camera + slide-transition depth offsets. Both are event-driven; an infinite-loop parallax implementation is prohibited.
+- Layers live inside the gate-safe `.deco-layer` wrapper (`aria-hidden`, `overflow: hidden`). A parallax layer in the content flow is prohibited.
+- ≤ 4 layers per slide; `translate3d` transforms only; disabled under `prefers-reduced-motion`.
+
+Styles re-express or forbid this default in their `motion-policy` — the style file wins: `tech-mystery` requires `depth-parallax`; `minimal-modern` allows `subtle-depth-parallax` (≤ 2 layers, ≤ 12px, slide-change driven only); `editorial` allows `paper-depth-parallax` (≤ 2 layers, ≤ 8px, slide-enter only); `bauhaus` allows `geometric-layer-parallax` (linear/`step()` timing only). All four forbid `mouse-tracked-parallax` except `tech-mystery`.
+
+### Particle Choreography (opt-in, cover & section slides only)
+
+Converge/dissolve particle moments (`particle-converge-glyph`) are allowed where the style's policy permits: 2D canvas only, ≤ 2000 particles, the rAF loop must terminate at convergence, and the real heading stays HTML text. WebGL / three.js particle systems require explicit user approval, deck-bundle vendoring, and a passing render-gate pilot before use in any deliverable.
 
 ### GPU-Accelerated Properties Only
 
@@ -89,4 +104,8 @@ Each visible slide must not have more than 5 simultaneously running continuous (
 - An element flashes more than 3 times per second → Violation (WCAG 2.3.1, universal)
 - DevTools Performance panel shows < 30fps on any slide → Violation
 - Animation library bundle exceeds 100KB gzipped → Violation
+- Depth parallax absent from cover + section dividers where the chosen style does not forbid it → Violation
+- Parallax layer outside a gate-safe `.deco-layer` wrapper, or driven by an infinite animation loop → Violation
+- Mouse-camera parallax still active under `prefers-reduced-motion: reduce` → Violation
+- Particle choreography exceeding 2000 particles, using WebGL without user approval, or whose rAF loop never terminates → Violation
 - QA Reviewer approves a presentation that violates any of the above → Violation

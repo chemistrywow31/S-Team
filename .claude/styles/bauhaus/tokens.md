@@ -361,7 +361,10 @@ motion-policy:
     - color-flip-on-hover          # red ↔ black ↔ yellow swap, 0.15s, no blur
     - stripe-draw-in               # 8px colored strip animates from 0 to full width, 0.5s
     - svg-shape-build              # geometric shapes appear sequentially, 0.3s each
+    - geometric-layer-parallax     # flat shape planes offset on slide change; linear or step() timing only
   forbidden:
+    - mouse-tracked-parallax       # continuous depth illusion contradicts flat poster honesty
+    - particle-converge-glyph
     - glass-morphism
     - rotating-glow-border
     - particle-background
@@ -376,7 +379,7 @@ motion-policy:
     continuous-animations-per-slide: 0   # zero infinite loops; mechanical motion is event-driven
     slides-with-effects: 100             # every slide may use entrance motion (it is structural)
   reduced-motion:
-    disable: [block-slide-entrance, grid-snap-fragment, stripe-draw-in, svg-shape-build]
+    disable: [block-slide-entrance, grid-snap-fragment, stripe-draw-in, svg-shape-build, geometric-layer-parallax]
     keep:    []                           # entirely still is acceptable for this style
 ```
 

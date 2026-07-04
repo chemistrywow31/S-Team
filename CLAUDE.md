@@ -46,7 +46,7 @@ Every factual claim in the presentation must have a traceable source. The Invest
 
 ### Premium Visual Effects
 
-Every HTML presentation must include premium visual effects that exceed standard AI-generated output quality. Required effect categories: glass morphism, rotating glow borders, gradient text, neon glows, SVG animations, particle backgrounds, and cinematic `data-auto-animate` transitions. Reference `skills/visual-effects/SKILL.md` for implementation patterns and `rules/visual-effects-standard.md` for quality enforcement. All effects must maintain 60fps performance and include `prefers-reduced-motion` accessibility support.
+Every HTML presentation must include premium visual effects that exceed standard AI-generated output quality. Required effect categories: glass morphism, rotating glow borders, gradient text, neon glows, SVG animations, particle backgrounds, multi-layer depth parallax, and cinematic `data-auto-animate` transitions. Reference `skills/visual-effects/SKILL.md` for implementation patterns (Depth Parallax System for the parallax package) and `rules/visual-effects-standard.md` for quality enforcement. Particle converge/dissolve choreography (2D canvas) is available as a cover/section opt-in; WebGL particle systems require explicit user approval plus a render-gate pilot. All effects must maintain 60fps performance and include `prefers-reduced-motion` accessibility support; each style's `motion-policy` re-expresses or forbids individual categories and always wins.
 
 ### Mandatory Gates (per deliverable format)
 

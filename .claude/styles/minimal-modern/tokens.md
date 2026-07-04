@@ -297,7 +297,10 @@ motion-policy:
     - subtle-translate-on-fragment   # 8px shift on `.fragment.fade-up`
     - underline-draw-on-link         # accent line under hovered links
     - svg-line-draw                  # only for monochromatic line illustrations
+    - subtle-depth-parallax          # ≤ 2 layers, ≤ 12px shift, slide-change driven only — no cursor tracking
   forbidden:
+    - mouse-tracked-parallax         # cursor-reactive depth breaks the stillness discipline
+    - particle-converge-glyph
     - glass-morphism
     - rotating-glow-border
     - particle-background
@@ -311,7 +314,7 @@ motion-policy:
     continuous-animations-per-slide: 0   # zero infinite loops
     slides-with-effects: 60              # entrance fade only counts
   reduced-motion:
-    disable: [fade-up-entrance, subtle-translate-on-fragment]
+    disable: [fade-up-entrance, subtle-translate-on-fragment, subtle-depth-parallax]
     keep:    []                           # acceptable to be totally still
 ```
 
