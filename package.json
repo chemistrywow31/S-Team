@@ -1,13 +1,15 @@
 {
-  "name": "presentation-studio",
+  "name": "s-team",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "keywords": [],
-  "author": "",
+  "description": "S-Team — a multi-agent presentation studio that ships slide decks like a product: researched, designed, machine-gated, and reviewed.",
+  "keywords": [
+    "presentation",
+    "slides",
+    "reveal.js",
+    "pptx",
+    "multi-agent",
+    "claude-code"
+  ],
   "license": "ISC",
   "dependencies": {
     "pptxgenjs": "^4.0.1",

@@ -64,7 +64,7 @@ No phase advances on a producer's self-claim: acceptance is performed by a fresh
 ## Quick start
 
 ```bash
-git clone <this-repo> && cd presentation-studio
+git clone https://github.com/chemistrywow31/S-Team.git && cd S-Team
 npm install          # puppeteer, reveal.js, pptxgenjs
 
 # open Claude Code in the repo, then:
@@ -161,7 +161,7 @@ Phase 7   修訂與交付              → 依審查發現路由回對應專家
 ## 快速開始
 
 ```bash
-git clone <this-repo> && cd presentation-studio
+git clone https://github.com/chemistrywow31/S-Team.git && cd S-Team
 npm install          # puppeteer、reveal.js、pptxgenjs
 
 # 在 repo 裡打開 Claude Code,然後:
