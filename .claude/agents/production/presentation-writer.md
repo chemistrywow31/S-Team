@@ -83,6 +83,7 @@ After producing draft output, run this critique pass before submission. If any c
 
 - `rules/execution-contract.md`: EC-1 return schema; DONE requires cited evidence.
 - `rules/worklog.md`: source-integrity evidence chain.
+- `rules/presentation-quality.md`: slide-content standards — single message, density limits, brand-name casing, and full-width CJK punctuation (`，。？！：；「」`) for all Chinese text.
 - `rules/reasoning-and-self-critique.md`: the two gates around this workflow.
 
 ## Collaboration Relationships

@@ -90,6 +90,16 @@ Every HTML presentation must include a responsive auto-fit mechanism. Reference 
 
 All company names, product names, and brand names must use their official casing exactly. Examples: "TutorABC" (not "tutorABC", "TUTORABC", or "Tutorabc"). The Coordinator must provide a brand name reference list at project start. The QA Reviewer must verify every occurrence of brand names in the final deliverable.
 
+### Full-Width Punctuation in CJK Text
+
+Chinese (and other CJK) text in the deliverable — slide titles, body text, labels, chart annotations, and speaker notes — must use full-width punctuation. This section governs CJK text only; English/Latin-language decks use standard half-width punctuation throughout.
+
+- Sentence punctuation must be full-width: `，` `。` `？` `！` `：` `；`, plus the enumeration comma `、` (頓號). Half-width `,` `.` `?` `!` `:` `;` inside a Chinese sentence are prohibited.
+- Quotation marks in Chinese text use corner brackets — `「」` outer, `『』` nested — not straight or curly Latin quotes (`"` `'`).
+- Parentheses, ellipsis, and dashes wrapping Chinese content use full-width forms — `（）`, `……`, `——` — not `()`, `...`, `--`.
+- A Chinese sentence still ends in `。` when its final token is a Latin word or number: `本季營收成長 20%。`
+- Half-width is retained inside Latin runs, numbers (decimal points and separators), dates, times, units, math expressions, URLs, file paths, and code identifiers — so the kebab-case File Naming rule and embedded English remain unaffected.
+
 ### HTML Presentation Compatibility
 
 HTML-format presentations must be responsive and render correctly in the latest stable versions of Chrome and Firefox. The Web Developer must test in both browsers before marking the task complete.
@@ -117,4 +127,6 @@ All HTML presentations must comply with `rules/visual-effects-standard.md`. Key 
 - Any slide content extends beyond the configured viewport and requires scrolling or is clipped → Violation
 - HTML presentation missing responsive auto-fit mechanism (see `rules/responsive-auto-fit.md`) → Violation
 - A brand name appears with incorrect casing (e.g., "tutorABC" instead of "TutorABC") → Violation
+- A half-width `,` `.` `?` `!` `:` or `;` appears inside a Chinese sentence (e.g., "營收成長, 但..." or "如何達成?") → Violation
+- Chinese text uses Latin quotation marks (`"` or `'`) instead of corner brackets `「」` / `『』` → Violation
 - QA Reviewer approves a presentation that violates any of the above → Violation
